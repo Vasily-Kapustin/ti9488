@@ -6,6 +6,8 @@
  *
  * Based on mi0283qt.c:
  * Copyright 2016 Noralf Trønnes
+ * Based on ili9488.c:
+ * Copyright 2019 Bird Techstep
  */
 
 #include <linux/backlight.h>
@@ -437,8 +439,6 @@ int mipi_dbi18_dev_init(struct mipi_dbi_dev *dbidev,
 					      ARRAY_SIZE(mipi_dbi_formats), mode,
 					      rotation, bufsize);
 }
-
-
 
 
 static void sx035hv006_enable(struct drm_simple_display_pipe *pipe,
