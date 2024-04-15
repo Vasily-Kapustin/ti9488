@@ -433,7 +433,7 @@ int mipi_dbi18_dev_init(struct mipi_dbi_dev *dbidev,
 {
 	size_t bufsize = mode->vdisplay * mode->hdisplay * sizeof(u32);
 
-	dbidev->drm.mode_config.preferred_depth = 24;
+	dbidev->drm.mode_config.preferred_depth = 32;
 
 	return mipi_dbi_dev_init_with_formats(dbidev, funcs, mipi_dbi_formats,
 					      ARRAY_SIZE(mipi_dbi_formats), mode,

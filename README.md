@@ -1,7 +1,10 @@
 # Incomplete MSP3520 Driver for ili9488 On Raspberry Pi 
 The display documentation: http://www.lcdwiki.com/3.5inch_SPI_Module_ILI9488_SKU:MSP3520
+
 This driver is based on work found here: https://github.com/birdtechstep/tinydrm
-I would use the tinydrm drivers but since tinydrm was implemented into Linux as tiny the repo above is stale 
+
+I would use the tinydrm drivers but since tinydrm was implemented into Linux as tiny the repo above is stale
+
 I haven't been able to get it working 
 
 Before anyone asks why I'm ripping functions straight out of the mipi_dbi and drm libraries there are two reasons:
