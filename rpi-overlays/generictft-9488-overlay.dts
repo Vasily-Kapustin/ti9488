@@ -7,7 +7,6 @@
 /plugin/;
 
 
-
 / {
         compatible = "brcm,bcm2835";
 
@@ -29,8 +28,8 @@
                 target = <&gpio>;
                 __overlay__ {
                         pitft_pins: pitft_pins {
-                                brcm,pins = <23 24 25>;
-                                brcm,function = <1 1 1>; /* out out out */
+                                brcm,pins = <17 23 24 25>;
+                                brcm,function = <0 1 1 1>; /* out out out */
                         };
                 };
         };
@@ -51,10 +50,23 @@
                                 spi-max-frequency = <128000000>;
 
                                 rotation = <0>;
-								reset-gpios = <&gpio 25 0>;
+				reset-gpios = <&gpio 25 0>;
                                 dc-gpios = <&gpio 24 0>;
                                 backlight = <&backlight>;
                         };
+                        /* needed for touchscreen */
+                        pitft_ts: pitft-ts@1 {
+				compatible = "ti,ads7846";
+				reg = <1>;
+
+				spi-max-frequency = <2000000>;
+				interrupts = <17 2>; /* high-to-low edge triggered */
+				interrupt-parent = <&gpio>;
+				pendown-gpio = <&gpio 17 1>;
+				ti,swap-xy;
+				ti,x-plate-ohms = /bits/ 16 <100>;
+				ti,pressure-max = /bits/ 16 <255>;
+			};
                 };
         };
 	

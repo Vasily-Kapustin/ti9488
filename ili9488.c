@@ -20,6 +20,7 @@
 #include <drm/drm_atomic_helper.h>
 #include <drm/drm_damage_helper.h>
 #include <drm/drm_drv.h>
+#include <drm/drm_fbdev_generic.h>
 #include <drm/drm_framebuffer.h>
 #include <drm/drm_format_helper.h>
 #include <drm/drm_gem_framebuffer_helper.h>
@@ -134,6 +135,7 @@
 #define ILI9488_MADCTL_MX	BIT(6)
 #define ILI9488_MADCTL_MY	BIT(7)
 
+//Rewrite of MIPI to get rgb666 working --------------------- 
 
 static void mipi_dbi18_fb_dirty(struct drm_framebuffer *fb, struct drm_rect *rect);
 		
@@ -284,8 +286,8 @@ static void drm_fb_xrgb8888_to_rgb666_line(void *dbuf, const void *sbuf, unsigne
 	for(x = 0; x < pixels; x++){
 		pix = le32_to_cpu(sbuf32[x]);
 		*dbuf8++ = (pix & 0x000000FC)>>0;
-		*dbuf8++ = (pix & 0x0000FC00)>>0;
-		*dbuf8++ = (pix & 0x00FC0000)>>0;
+		*dbuf8++ = (pix & 0x0000FC00)>>8;
+		*dbuf8++ = (pix & 0x00FC0000)>>16;
 	}
 }
 
@@ -440,6 +442,7 @@ int mipi_dbi18_dev_init(struct mipi_dbi_dev *dbidev,
 					      rotation, bufsize);
 }
 
+//Actual driver starts here --------------------- 
 
 static void sx035hv006_enable(struct drm_simple_display_pipe *pipe,
 		struct drm_crtc_state *crtc_state,
