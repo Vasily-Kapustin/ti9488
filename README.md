@@ -1,11 +1,9 @@
-# Incomplete MSP3520 Driver for ili9488 On Raspberry Pi 
+# MSP3520 Driver for ili9488 On Raspberry Pi 
 The display documentation: http://www.lcdwiki.com/3.5inch_SPI_Module_ILI9488_SKU:MSP3520
 
 This driver is based on work found here: https://github.com/birdtechstep/tinydrm
 
 I would use the tinydrm drivers but since tinydrm was implemented into Linux as tiny the repo above is stale
-
-I haven't been able to get it working 
 
 Before anyone asks why I'm ripping functions straight out of the mipi_dbi and drm libraries there are two reasons:
 1. Current versions do not support RGB666 which the controller uses
@@ -42,7 +40,6 @@ sudo depmod
 ~~~~
 If you cannot find the /build directory this means that the headers did not download correctly
 
-rpi-update may update your kernel but you wont get headers for it, kernel compilation is the alternative but its a pain
 
 
 ### Set up overlay
@@ -59,4 +56,5 @@ dtparam=rotation=90
 ~~~~
 
 ## Touchscreen
-Implementation is pending
+Currently running into https://github.com/raspberrypi/linux/issues/6067
+Should work with newest branch but is not tested
