@@ -163,144 +163,6 @@ static void mipi_dbi_set_window_address(struct mipi_dbi_dev *dbidev,
 			 ys & 0xff, (ye >> 8) & 0xff, ye & 0xff);
 }
 
-static unsigned int clip_offset(const struct drm_rect *clip, unsigned int pitch, unsigned int cpp)
-{
-	return clip->y1 * pitch + clip->x1 * cpp;
-}
-
-static int __drm_fb_xfrm(void *dst, unsigned long dst_pitch, unsigned long dst_pixsize,
-			 const void *vaddr, const struct drm_framebuffer *fb,
-			 const struct drm_rect *clip, bool vaddr_cached_hint,
-			 void (*xfrm_line)(void *dbuf, const void *sbuf, unsigned int npixels))
-{
-	unsigned long linepixels = drm_rect_width(clip);
-	unsigned long lines = drm_rect_height(clip);
-	size_t sbuf_len = linepixels * fb->format->cpp[0];
-	void *stmp = NULL;
-	unsigned long i;
-	const void *sbuf;
-
-	/*
-	 * Some source buffers, such as DMA memory, use write-combine
-	 * caching, so reads are uncached. Speed up access by fetching
-	 * one line at a time.
-	 */
-	if (!vaddr_cached_hint) {
-		stmp = kmalloc(sbuf_len, GFP_KERNEL);
-		if (!stmp)
-			return -ENOMEM;
-	}
-
-	if (!dst_pitch)
-		dst_pitch = drm_rect_width(clip) * dst_pixsize;
-	vaddr += clip_offset(clip, fb->pitches[0], fb->format->cpp[0]);
-
-	for (i = 0; i < lines; ++i) {
-		if (stmp)
-			sbuf = memcpy(stmp, vaddr, sbuf_len);
-		else
-			sbuf = vaddr;
-		xfrm_line(dst, sbuf, linepixels);
-		vaddr += fb->pitches[0];
-		dst += dst_pitch;
-	}
-
-	kfree(stmp);
-
-	return 0;
-}
-
-/* TODO: Make this function work with multi-plane formats. */
-static int __drm_fb_xfrm_toio(void __iomem *dst, unsigned long dst_pitch, unsigned long dst_pixsize,
-			      const void *vaddr, const struct drm_framebuffer *fb,
-			      const struct drm_rect *clip, bool vaddr_cached_hint,
-			      void (*xfrm_line)(void *dbuf, const void *sbuf, unsigned int npixels))
-{
-	unsigned long linepixels = drm_rect_width(clip);
-	unsigned long lines = drm_rect_height(clip);
-	size_t dbuf_len = linepixels * dst_pixsize;
-	size_t stmp_off = round_up(dbuf_len, ARCH_KMALLOC_MINALIGN); /* for sbuf alignment */
-	size_t sbuf_len = linepixels * fb->format->cpp[0];
-	void *stmp = NULL;
-	unsigned long i;
-	const void *sbuf;
-	void *dbuf;
-
-	if (vaddr_cached_hint) {
-		dbuf = kmalloc(dbuf_len, GFP_KERNEL);
-	} else {
-		dbuf = kmalloc(stmp_off + sbuf_len, GFP_KERNEL);
-		stmp = dbuf + stmp_off;
-	}
-	if (!dbuf)
-		return -ENOMEM;
-
-	if (!dst_pitch)
-		dst_pitch = linepixels * dst_pixsize;
-	vaddr += clip_offset(clip, fb->pitches[0], fb->format->cpp[0]);
-
-	for (i = 0; i < lines; ++i) {
-		if (stmp)
-			sbuf = memcpy(stmp, vaddr, sbuf_len);
-		else
-			sbuf = vaddr;
-		xfrm_line(dbuf, sbuf, linepixels);
-		memcpy_toio(dst, dbuf, dbuf_len);
-		vaddr += fb->pitches[0];
-		dst += dst_pitch;
-	}
-
-	kfree(dbuf);
-
-	return 0;
-}
-
-static int drm_fb_xfrm(struct iosys_map *dst,
-		       const unsigned int *dst_pitch, const u8 *dst_pixsize,
-		       const struct iosys_map *src, const struct drm_framebuffer *fb,
-		       const struct drm_rect *clip, bool vaddr_cached_hint,
-		       void (*xfrm_line)(void *dbuf, const void *sbuf, unsigned int npixels))
-{
-	static const unsigned int default_dst_pitch[DRM_FORMAT_MAX_PLANES] = {
-		0, 0, 0, 0
-	};
-
-	if (!dst_pitch)
-		dst_pitch = default_dst_pitch;
-
-	/* TODO: handle src in I/O memory here */
-	if (dst[0].is_iomem)
-		return __drm_fb_xfrm_toio(dst[0].vaddr_iomem, dst_pitch[0], dst_pixsize[0],
-					  src[0].vaddr, fb, clip, vaddr_cached_hint, xfrm_line);
-	else
-		return __drm_fb_xfrm(dst[0].vaddr, dst_pitch[0], dst_pixsize[0],
-				     src[0].vaddr, fb, clip, vaddr_cached_hint, xfrm_line);
-}
-
-static void drm_fb_xrgb8888_to_rgb666_line(void *dbuf, const void *sbuf, unsigned int pixels)
-{
-	u8 *dbuf8 = dbuf;
-	const __le32 *sbuf32 = sbuf;
-	unsigned int x;
-	u32 pix;
-	for(x = 0; x < pixels; x++){
-		pix = le32_to_cpu(sbuf32[x]);
-		*dbuf8++ = (pix & 0x000000FC)>>0;
-		*dbuf8++ = (pix & 0x0000FC00)>>8;
-		*dbuf8++ = (pix & 0x00FC0000)>>16;
-	}
-}
-
-void drm_fb_xrgb8888_to_rgb666(struct iosys_map *dst, const unsigned int *dst_pitch,
-			       const struct iosys_map *src, const struct drm_framebuffer *fb,
-			       const struct drm_rect *clip)
-{
-	static const u8 dst_pixsize[DRM_FORMAT_MAX_PLANES] = {3};
-	drm_fb_xfrm(dst,dst_pitch,dst_pixsize,src,fb,clip,false,drm_fb_xrgb8888_to_rgb666_line);
-}
-
-
-
 int mipi_dbi18_buf_copy(void *dst, struct drm_framebuffer *fb,
 		      struct drm_rect *clip, bool swap)
 {
@@ -326,7 +188,7 @@ int mipi_dbi18_buf_copy(void *dst, struct drm_framebuffer *fb,
 			drm_fb_memcpy(&dst_map, NULL, data, fb, clip);
 		break;
 	case DRM_FORMAT_XRGB8888:
-		drm_fb_xrgb8888_to_rgb666(&dst_map, NULL, data, fb, clip);
+		drm_fb_xrgb8888_to_rgb888(&dst_map, NULL, data, fb, clip);
 		break;
 	default:
 		drm_err_once(fb->dev, "Format is not supported: %p4cc\n",
@@ -685,4 +547,3 @@ module_spi_driver(ili9488_spi_driver);
 MODULE_DESCRIPTION("Ilitek ILI9488 DRM driver");
 MODULE_AUTHOR("VASILY KAPUSTIN <vasilykap@live.com>");
 MODULE_LICENSE("GPL");
-

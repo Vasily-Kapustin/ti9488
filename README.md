@@ -5,12 +5,10 @@ This driver is based on work found here: https://github.com/birdtechstep/tinydrm
 
 I would use the tinydrm drivers but since tinydrm was implemented into Linux as tiny the repo above is stale
 
-Before anyone asks why I'm ripping functions straight out of the mipi_dbi and drm libraries there are two reasons:
-1. Current versions do not support RGB666 which the controller uses
-2. I frankly don't have a linux install and have not figured out how to complie the rpi kernel
+Before anyone asks why I'm ripping functions straight out of the mipi_dbi and drm libraries, current versions do not support RGB666 which the controller uses
 
 Driver itself is located in ili9488.c
-The code is really in 2 sections the first is the mipi_dbi functions and the second that starts at about line 444 is the driver
+The code is really in 2 sections the first is the mipi_dbi functions and the second that starts at about line 307 is the driver
 
 This driver is unfortunately OS dependant and is currently intended for rpi 6.6.y (BookWorm)
 
@@ -24,7 +22,6 @@ sudo reboot
 ~~~
 
 ### Headers
-I need to go through to see which of these are actually used
 ~~~~
 sudo apt install git bc bison flex libssl-dev libncurses5-dev
 sudo apt-get install raspberrypi-kernel-headers
@@ -56,5 +53,4 @@ dtparam=rotation=90
 ~~~~
 
 ## Touchscreen
-Currently running into https://github.com/raspberrypi/linux/issues/6067
-Should work with newest branch but is not tested
+Currently running into issues with ads7846 driver
